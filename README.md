@@ -30,6 +30,6 @@ streamlit run app.py              # dashboard with charts and report
 
 - Fetcher output: `date_range, weekly_totals, daily_totals, by_category, raw_stats`
 - Analyser output: `metrics, trends, anomalies`
-- Writer output: `weekly_report.md`
+- Writer output: `weekly_report.pdf`
 
 Anomalies are found with statistics in code; the LLM only writes the report.

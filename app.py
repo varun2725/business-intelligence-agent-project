@@ -8,9 +8,39 @@ from agents.data_fetcher import data_fetcher_agent
 from agents.insight_analyser import insight_analyser_agent
 from agents.report_writer import report_writer_agent
 from test_writer import real_llm, mock_llm
+from fpdf import FPDF
+
+def markdown_to_pdf(text: str) -> bytes:
+    for old, new in {"\u2014": "-", "\u2013": "-", "\u2018": "'", "\u2019": "'",
+                     "\u201c": '"', "\u201d": '"', "\u2022": "-"}.items():
+        text = text.replace(old, new)
+    text = text.encode("latin-1", "replace").decode("latin-1")
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            pdf.ln(3)
+        elif stripped.startswith("#"):
+            pdf.set_font("Helvetica", "B", 15)
+            pdf.multi_cell(0, 9, stripped.lstrip("#").strip(), new_x="LMARGIN", new_y="NEXT")
+        else:
+            pdf.set_font("Helvetica", size=11)
+            pdf.multi_cell(0, 6, stripped.replace("* ", "- ", 1) if stripped.startswith("* ") else stripped,
+                           markdown=True, new_x="LMARGIN", new_y="NEXT")
+    return bytes(pdf.output())
 
 load_dotenv()
 st.set_page_config(page_title="BI Agent", layout="wide")
+if not st.user.is_logged_in:
+    st.title("Business Intelligence Agent")
+    st.button("Sign in with Google", on_click=st.login)
+    st.stop()
+
+st.sidebar.write(f"Signed in as {st.user.email}")
+st.sidebar.button("Log out", on_click=st.logout)
 st.title("Business Intelligence Agent")
 
 uploaded = st.sidebar.file_uploader("Upload sales CSV (date, category, revenue)", type="csv")
@@ -59,4 +89,9 @@ if "report" in st.session_state:
 
     st.subheader("Weekly report")
     st.markdown(report)
-    st.download_button("Download report (.md)", report, file_name="weekly_report.md")
+    st.download_button(
+    "Download report (PDF)",
+    data=markdown_to_pdf(report),
+    file_name="weekly_report.pdf",
+    mime="application/pdf",
+)
